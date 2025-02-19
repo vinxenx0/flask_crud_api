@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Mi App{% endblock %}</title>
+    {{ bootstrap.load_css() }}  <!-- ✅ Cargar Bootstrap -->
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <a class="navbar-brand" href="/">Inicio</a>
+    </nav>
+    
+    <div class="container mt-4">
+        {% block content %}{% endblock %}
+    </div>
+
+    {{ bootstrap.load_js() }}  <!-- ✅ Cargar Bootstrap JS -->
+</body>
+</html>

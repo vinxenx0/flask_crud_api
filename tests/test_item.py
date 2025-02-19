@@ -1,18 +1,16 @@
 def test_create_item(client):
     login_response = client.post("/auth/login", json={"username": "testuser", "password": "password123"})
     assert login_response.status_code == 200
-    token = login_response.get_json()["token"]
+    token = login_response.get_json().get("token", None)
+    assert token, "Token de autenticación no recibido"
 
     headers = {
         "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Accept": "application/json"  # ✅ Para evitar redirecciones
     }
 
     response = client.post("/items/", json={"name": "Test Item", "description": "A test item"}, headers=headers)
-
-    print("DEBUG Status Code:", response.status_code)  # 👈 Imprimir código de estado
-    print("DEBUG Response Body:", response.get_json())  # 👈 Imprimir JSON recibido
-
     assert response.status_code == 201
     json_data = response.get_json()
     assert json_data["message"] == "Item created"

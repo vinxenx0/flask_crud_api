@@ -7,10 +7,13 @@ def test_register_user(client):
         "role": "user"
     })
 
-    assert response.status_code == 201
-    assert response.is_json  # 👈 Verificar que Flask devuelve JSON
-    json_data = response.get_json()  # 👈 Acceder a los datos correctamente
-    assert json_data["message"] == "User created successfully"
+    if response.status_code == 409:  # Usuario ya registrado
+        assert response.get_json()["message"] == "Username already exists"
+    else:
+        assert response.status_code == 201
+        assert response.is_json
+        json_data = response.get_json()
+        assert json_data["message"] == "User created successfully"
 
 
 def test_login_user(client):

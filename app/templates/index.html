@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio{% endblock %}
+
+{% block content %}
+    <h1 class="text-center">Bienvenido a Flask-Bootstrap</h1>
+    <p class="text-center">Este es un frontend básico con Jinja2 y Bootstrap.</p>
+    <div class="text-center">
+        <a href="{{ url_for('auth_views.login') }}" class="btn btn-primary">Iniciar Sesión</a>
+    </div>
+{% endblock %}

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2 class="text-center">Panel de Control</h2>
+
+    <!-- Datos del Usuario -->
+    <div class="card p-3 mb-4">
+        <h4>Bienvenido, <span id="username">{{ user.username }}</span> ({{ user.role }})</h4>
+        <form id="updateUserForm">
+            <div class="mb-3">
+                <label>Nuevo Nombre de Usuario:</label>
+                <input type="text" id="newUsername" class="form-control" placeholder="Nuevo usuario">
+            </div>
+            <div class="mb-3">
+                <label>Nueva Contraseña:</label>
+                <input type="password" id="newPassword" class="form-control" placeholder="Nueva contraseña">
+            </div>
+            <button type="submit" class="btn btn-primary">Actualizar Perfil</button>
+        </form>
+        <button id="deleteAccountBtn" class="btn btn-danger mt-3">Eliminar Cuenta</button>
+    </div>
+
+    <!-- Ítems del Usuario -->
+    <h3>Mis Ítems</h3>
+    <div class="card p-3">
+        <ul id="itemList" class="list-group"></ul>
+    </div>
+
+    {% if user.role == "admin" %}
+        <!-- Gestión de Usuarios (Solo Admin) -->
+        <h3 class="mt-4">Gestión de Usuarios (Admin)</h3>
+        <div class="card p-3">
+            <ul id="userList" class="list-group"></ul>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+    // ✅ Obtiene el token almacenado en localStorage
+    const token = {{token}}//localStorage.getItem("token");
+
+    if (!token) {
+        alert("No autorizado. Inicia sesión nuevamente.");
+        window.location.href = "/login";
+    }
+
+    // ✅ Cargar Ítems del Usuario
+    function loadItems() {
+        fetch("/items/", {
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const itemList = document.getElementById("itemList");
+            itemList.innerHTML = "";
+            data.forEach(item => {
+                itemList.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${item.name} - ${item.description}
+                        <button class="btn btn-sm btn-danger" onclick="deleteItem(${item.id})">Eliminar</button>
+                    </li>`;
+            });
+        })
+        .catch(error => console.error("Error cargando ítems:", error));
+    }
+
+    // ✅ Cargar Usuarios (Solo Admin)
+    function loadUsers() {
+        fetch("/users/", {
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const userList = document.getElementById("userList");
+            userList.innerHTML = "";
+            data.forEach(user => {
+                userList.innerHTML += `
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        ${user.username} (${user.role})
+                        <button class="btn btn-sm btn-danger" onclick="deleteUser(${user.id})">Eliminar</button>
+                    </li>`;
+            });
+        })
+        .catch(error => console.error("Error cargando usuarios:", error));
+    }
+
+    // ✅ Actualizar Usuario
+    document.getElementById("updateUserForm").addEventListener("submit", function(event) {
+        event.preventDefault();
+        const newUsername = document.getElementById("newUsername").value;
+        const newPassword = document.getElementById("newPassword").value;
+
+        fetch("/user/update", {
+            method: "POST",
+            headers: { 
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify({ username: newUsername, password: newPassword })
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            window.location.reload();
+        })
+        .catch(error => console.error("Error actualizando usuario:", error));
+    });
+
+    // ✅ Eliminar Cuenta del Usuario
+    document.getElementById("deleteAccountBtn").addEventListener("click", function() {
+        if (!confirm("¿Estás seguro de que quieres eliminar tu cuenta?")) return;
+
+        fetch("/user/delete", {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            localStorage.removeItem("token");
+            window.location.href = "/login";
+        })
+        .catch(error => console.error("Error eliminando cuenta:", error));
+    });
+
+    // ✅ Eliminar Ítem
+    function deleteItem(itemId) {
+        fetch(`/items/${itemId}`, {
+            method: "DELETE",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadItems();
+        })
+        .catch(error => console.error("Error eliminando ítem:", error));
+    }
+
+    // ✅ Eliminar Usuario (Admin)
+    function deleteUser(userId) {
+        fetch(`/admin/delete_user/${userId}`, {
+            method: "POST",
+            headers: { "Authorization": `Bearer ${token}` }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(data.message);
+            loadUsers();
+        })
+        .catch(error => console.error("Error eliminando usuario:", error));
+    }
+
+    // ✅ Cargar Datos Inicialmente
+    loadItems();
+    {% if user.role == "admin" %} loadUsers(); {% endif %}
+</script>
+{% endblock %}

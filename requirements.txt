@@ -7,3 +7,8 @@ Flask-Logging
 pytest
 bcrypt
 flask-testing
+flask-bootstrap
+flask-wtf
+flask_migrate
+flask-login
+

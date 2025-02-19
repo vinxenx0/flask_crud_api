@@ -1,70 +1,63 @@
-from flask import request, jsonify
+from flask import request, jsonify, render_template, redirect, url_for, flash
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_login import login_required, current_user
 from app import db
 from app.models.item import Item
 
 class ItemController:
     @staticmethod
-    @jwt_required()
+    @jwt_required(optional=True)
     def get_items():
+        if not get_jwt_identity() and not current_user.is_authenticated:
+            if request.accept_mimetypes.best == "application/json":
+                return {"message": "Unauthorized"}, 401
+            return redirect(url_for("auth_views.login"))  # 🔄 Redirección solo para Web
+
         items = Item.query.all()
-        return [{"id": i.id, "name": i.name, "description": i.description} for i in items], 200
+        if request.accept_mimetypes.best == "application/json":
+            return [{"id": i.id, "name": i.name, "description": i.description} for i in items], 200
+        return render_template("items.html", items=items)  # 🎨 Para frontend
+
 
     @staticmethod
-    @jwt_required()
-    def get_item(item_id):
-        item = Item.query.get(item_id)
-        if not item:
-            return {"message": "Item not found"}, 404
-        return {"id": item.id, "name": item.name, "description": item.description}, 200
-
-    @staticmethod
-    @jwt_required()
+    @jwt_required(optional=True)
+    @login_required
     def create_item():
-        data = request.get_json(silent=True)
-        print("DEBUG request.get_json():", data)  # 👈 Verifica qué JSON está llegando realmente
+        if request.method == "POST":  # 🎨 HTML Form
+            name = request.form.get("name")
+            description = request.form.get("description")
+        else:  # API JSON
+            data = request.get_json()
+            name = data.get("name")
+            description = data.get("description")
 
-        if not data or not isinstance(data, dict):
-            return {"message": "Invalid or missing JSON data"}, 400
-
-        if "name" not in data or "description" not in data:
+        if not name or not description:
             return {"message": "Both 'name' and 'description' are required"}, 400
 
-        user_id = int(get_jwt_identity())  # 👈 Convertir `user_id` a entero
-
-        item = Item(name=data["name"], description=data["description"], user_id=user_id)
+        item = Item(name=name, description=description, user_id=current_user.id)
 
         db.session.add(item)
         db.session.commit()
 
-        return {"message": "Item created", "id": item.id}, 201  # ✅ Devolver también el `id`
+        if request.accept_mimetypes.best == "application/json":
+            return {"message": "Item created", "id": item.id}, 201
 
-
-
-
-    @staticmethod
-    @jwt_required()
-    def update_item(item_id):
-        data = request.get_json()
-        item = Item.query.get(item_id)
-        if not item:
-            return {"message": "Item not found"}, 404
-
-        if "name" in data:
-            item.name = data["name"]
-        if "description" in data:
-            item.description = data["description"]
-
-        db.session.commit()
-        return {"message": "Item updated successfully"}, 200
+        flash("Ítem creado con éxito", "success")
+        return redirect(url_for("user_views.dashboard"))
 
     @staticmethod
-    @jwt_required()
+    @jwt_required(optional=True)
+    @login_required
     def delete_item(item_id):
         item = Item.query.get(item_id)
         if not item:
-            return {"message": "Item not found"}, 404
+            return {"message": "Item not found"}, 404 if request.is_json else redirect(url_for("dashboard_views.dashboard"))
 
         db.session.delete(item)
         db.session.commit()
-        return {"message": "Item deleted"}, 200
+
+        if request.accept_mimetypes.best == "application/json":
+            return {"message": "Item deleted"}, 200
+
+        flash("Ítem eliminado con éxito", "success")
+        return redirect(url_for("user_views.dashboard"))
